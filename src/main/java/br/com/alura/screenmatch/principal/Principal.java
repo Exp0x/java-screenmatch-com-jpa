@@ -2,16 +2,15 @@ package br.com.alura.screenmatch.principal;
 
 import br.com.alura.screenmatch.model.DadosSerie;
 import br.com.alura.screenmatch.model.DadosTemporada;
-import br.com.alura.screenmatch.model.Episodio;
 import br.com.alura.screenmatch.service.ConsumoApi;
 import br.com.alura.screenmatch.service.ConverteDados;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.DoubleSummaryStatistics;
 import java.util.List;
-import java.util.Map;
 import java.util.Scanner;
-import java.util.stream.Collectors;
 
 public class Principal {
 
@@ -19,14 +18,15 @@ public class Principal {
     private ConsumoApi consumo = new ConsumoApi();
     private ConverteDados conversor = new ConverteDados();
     private final String ENDERECO = "https://www.omdbapi.com/?t=";
-    private final String API_KEY = "&apikey=6585022c";
+    private String API_KEY;
 
     public void exibeMenu() {
+        readApiKey();
         var menu = """
                 1 - Buscar séries
                 2 - Buscar episódios
-                
-                0 - Sair                                 
+
+                0 - Sair
                 """;
 
         System.out.println(menu);
@@ -61,7 +61,7 @@ public class Principal {
         return dados;
     }
 
-    private void buscarEpisodioPorSerie(){
+    private void buscarEpisodioPorSerie() {
         DadosSerie dadosSerie = getDadosSerie();
         List<DadosTemporada> temporadas = new ArrayList<>();
 
@@ -71,5 +71,14 @@ public class Principal {
             temporadas.add(dadosTemporada);
         }
         temporadas.forEach(System.out::println);
+    }
+
+    private void readApiKey() {
+        try {
+            API_KEY = Files.readString(Paths.get("src\\main\\resources\\apiKey.txt"));
+        } catch (IOException e) {
+            // TODO Auto-generated catch block
+            throw new RuntimeException("Falha em ler o arquivo da API Key", e);
+        }
     }
 }
