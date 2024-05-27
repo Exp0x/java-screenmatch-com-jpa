@@ -19,37 +19,46 @@ public class Principal {
     private ConverteDados conversor = new ConverteDados();
     private final String ENDERECO = "https://www.omdbapi.com/?t=";
     private String API_KEY;
+    private List<DadosSerie> listaSeries = new ArrayList<>();
 
     public void exibeMenu() {
         readApiKey();
-        var menu = """
-                1 - Buscar séries
-                2 - Buscar episódios
+        int opcao = -1;
+        while (opcao != 0) {
+            var menu = """
+                    1 - Buscar séries
+                    2 - Buscar episódios
+                    3 - Listar séries buscadas
 
-                0 - Sair
-                """;
+                    0 - Sair
+                    """;
 
-        System.out.println(menu);
-        var opcao = leitura.nextInt();
-        leitura.nextLine();
+            System.out.println(menu);
+            opcao = leitura.nextInt();
+            leitura.nextLine();
 
-        switch (opcao) {
-            case 1:
-                buscarSerieWeb();
-                break;
-            case 2:
-                buscarEpisodioPorSerie();
-                break;
-            case 0:
-                System.out.println("Saindo...");
-                break;
-            default:
-                System.out.println("Opção inválida");
+            switch (opcao) {
+                case 1:
+                    buscarSerieWeb();
+                    break;
+                case 2:
+                    buscarEpisodioPorSerie();
+                    break;
+                case 3:
+                    listarSeriesBuscadas(listaSeries);
+                    break;
+                case 0:
+                    System.out.println("Saindo...");
+                    break;
+                default:
+                    System.out.println("Opção inválida");
+            }
         }
     }
 
     private void buscarSerieWeb() {
         DadosSerie dados = getDadosSerie();
+        listaSeries.add(dados);
         System.out.println(dados);
     }
 
@@ -71,6 +80,10 @@ public class Principal {
             temporadas.add(dadosTemporada);
         }
         temporadas.forEach(System.out::println);
+    }
+
+    private void listarSeriesBuscadas(List<DadosSerie> list) {
+        list.forEach(System.out::println);
     }
 
     private void readApiKey() {
