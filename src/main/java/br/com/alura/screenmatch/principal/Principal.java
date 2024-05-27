@@ -2,6 +2,7 @@ package br.com.alura.screenmatch.principal;
 
 import br.com.alura.screenmatch.model.DadosSerie;
 import br.com.alura.screenmatch.model.DadosTemporada;
+import br.com.alura.screenmatch.model.Serie;
 import br.com.alura.screenmatch.service.ConsumoApi;
 import br.com.alura.screenmatch.service.ConverteDados;
 
@@ -9,8 +10,10 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Scanner;
+import java.util.stream.Collectors;
 
 public class Principal {
 
@@ -19,7 +22,7 @@ public class Principal {
     private ConverteDados conversor = new ConverteDados();
     private final String ENDERECO = "https://www.omdbapi.com/?t=";
     private String API_KEY;
-    private List<DadosSerie> listaSeries = new ArrayList<>();
+    private List<DadosSerie> DadosSeries = new ArrayList<>();
 
     public void exibeMenu() {
         readApiKey();
@@ -45,7 +48,7 @@ public class Principal {
                     buscarEpisodioPorSerie();
                     break;
                 case 3:
-                    listarSeriesBuscadas(listaSeries);
+                    listarSeriesBuscadas(DadosSeries);
                     break;
                 case 0:
                     System.out.println("Saindo...");
@@ -58,7 +61,7 @@ public class Principal {
 
     private void buscarSerieWeb() {
         DadosSerie dados = getDadosSerie();
-        listaSeries.add(dados);
+        DadosSeries.add(dados);
         System.out.println(dados);
     }
 
@@ -83,14 +86,20 @@ public class Principal {
     }
 
     private void listarSeriesBuscadas(List<DadosSerie> list) {
-        list.forEach(System.out::println);
+        List<Serie> series = new ArrayList<>();
+        series = DadosSeries.stream()
+                .map(d -> new Serie(d))
+                .collect(Collectors.toList());
+
+        series.stream()
+                .sorted(Comparator.comparing(Serie::getGenero))
+                .forEach(System.out::println);
     }
 
     private void readApiKey() {
         try {
             API_KEY = Files.readString(Paths.get("src\\main\\resources\\apiKey.txt"));
         } catch (IOException e) {
-            // TODO Auto-generated catch block
             throw new RuntimeException("Falha em ler o arquivo da API Key", e);
         }
     }
