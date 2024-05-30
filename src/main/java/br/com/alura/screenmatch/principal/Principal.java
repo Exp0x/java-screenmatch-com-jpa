@@ -3,15 +3,18 @@ package br.com.alura.screenmatch.principal;
 import br.com.alura.screenmatch.model.DadosSerie;
 import br.com.alura.screenmatch.model.DadosTemporada;
 import br.com.alura.screenmatch.model.Serie;
+import br.com.alura.screenmatch.repository.SerieRepository;
 import br.com.alura.screenmatch.service.ConsumoApi;
 import br.com.alura.screenmatch.service.ConverteDados;
+
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 import java.util.Scanner;
-import java.util.stream.Collectors;
-
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -21,10 +24,14 @@ public class Principal {
     private ConsumoApi consumo = new ConsumoApi();
     private ConverteDados conversor = new ConverteDados();
     private final String ENDERECO = "https://www.omdbapi.com/?t=";
-
-    @Value("${api.key}")
-    private String apiKey;
     private List<DadosSerie> DadosSeries = new ArrayList<>();
+    
+    @Autowired
+    private SerieRepository repositorioSerie;
+    
+    private String apiKey = Optional.ofNullable(System.getenv("API_KEY_OMDB"))
+            .orElseThrow(() -> new IllegalStateException("API_KEY_OMDB env var is not defined"));
+
 
     public void exibeMenu() {
         int opcao = -1;
@@ -62,14 +69,20 @@ public class Principal {
 
     private void buscarSerieWeb() {
         DadosSerie dados = getDadosSerie();
-        DadosSeries.add(dados);
-        System.out.println(dados);
+        Serie serie = new Serie(dados);
+        repositorioSerie.save(serie);
+        System.out.println(serie);
     }
 
     private DadosSerie getDadosSerie() {
         System.out.println("Digite o nome da série para busca");
         var nomeSerie = leitura.nextLine();
-        var json = consumo.obterDados(ENDERECO + nomeSerie.replace(" ", "+") + apiKey);
+        try {
+            nomeSerie = URLEncoder.encode(nomeSerie, "UTF-8");
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
+        }
+        var json = consumo.obterDados(ENDERECO + nomeSerie + apiKey);
         DadosSerie dados = conversor.obterDados(json, DadosSerie.class);
         return dados;
     }
@@ -87,11 +100,7 @@ public class Principal {
     }
 
     private void listarSeriesBuscadas(List<DadosSerie> list) {
-        List<Serie> series = new ArrayList<>();
-        series = DadosSeries.stream()
-                .map(d -> new Serie(d))
-                .collect(Collectors.toList());
-
+        List<Serie> series = repositorioSerie.findAll();
         series.stream()
                 .sorted(Comparator.comparing(Serie::getGenero))
                 .forEach(System.out::println);
