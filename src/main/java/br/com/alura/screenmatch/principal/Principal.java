@@ -2,6 +2,7 @@ package br.com.alura.screenmatch.principal;
 
 import br.com.alura.screenmatch.model.DadosSerie;
 import br.com.alura.screenmatch.model.DadosTemporada;
+import br.com.alura.screenmatch.model.Episodio;
 import br.com.alura.screenmatch.model.Serie;
 import br.com.alura.screenmatch.repository.SerieRepository;
 import br.com.alura.screenmatch.service.ConsumoApi;
@@ -14,6 +15,8 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.Scanner;
+import java.util.stream.Collectors;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -24,14 +27,14 @@ public class Principal {
     private ConsumoApi consumo = new ConsumoApi();
     private ConverteDados conversor = new ConverteDados();
     private final String ENDERECO = "https://www.omdbapi.com/?t=";
-    private List<DadosSerie> DadosSeries = new ArrayList<>();
-    
+    // private List<DadosSerie> DadosSeries = new ArrayList<>();
+    private List<Serie> series = new ArrayList<>();
+
     @Autowired
     private SerieRepository repositorioSerie;
-    
+
     private String apiKey = Optional.ofNullable(System.getenv("API_KEY_OMDB"))
             .orElseThrow(() -> new IllegalStateException("API_KEY_OMDB env var is not defined"));
-
 
     public void exibeMenu() {
         int opcao = -1;
@@ -56,7 +59,7 @@ public class Principal {
                     buscarEpisodioPorSerie();
                     break;
                 case 3:
-                    listarSeriesBuscadas(DadosSeries);
+                    listarSeriesBuscadas();
                     break;
                 case 0:
                     System.out.println("Saindo...");
@@ -88,19 +91,41 @@ public class Principal {
     }
 
     private void buscarEpisodioPorSerie() {
-        DadosSerie dadosSerie = getDadosSerie();
+        listarSeriesBuscadas();
+        System.out.println("Escolha uma serie pelo nome: ");
+        var nomeSerie = leitura.nextLine();
+
+        Optional<Serie> serie = series.stream()
+                .filter(s -> s.getTitulo().toLowerCase().contains(nomeSerie.toLowerCase()))
+                .findFirst();
+
+        if (serie.isEmpty()) {
+            System.out.println("Serie não encontrada");
+            return;
+        }
+
+        var serieEncontrada = serie.get();
+
         List<DadosTemporada> temporadas = new ArrayList<>();
 
-        for (int i = 1; i <= dadosSerie.totalTemporadas(); i++) {
-            var json = consumo.obterDados(ENDERECO + dadosSerie.titulo().replace(" ", "+") + "&season=" + i + apiKey);
+        for (int i = 1; i <= serieEncontrada.getTotalTemporadas(); i++) {
+            var json = consumo
+                    .obterDados(ENDERECO + serieEncontrada.getTitulo().replace(" ", "+") + "&season=" + i + apiKey);
             DadosTemporada dadosTemporada = conversor.obterDados(json, DadosTemporada.class);
             temporadas.add(dadosTemporada);
+
         }
-        temporadas.forEach(System.out::println);
+
+        List<Episodio> episodios = temporadas.stream()
+                .flatMap(d -> d.episodios().stream()
+                        .map(e -> new Episodio(d.numero(), e)))
+                .collect(Collectors.toList());
+        serieEncontrada.setEpisodios(episodios);
+        repositorioSerie.save(serieEncontrada);
     }
 
-    private void listarSeriesBuscadas(List<DadosSerie> list) {
-        List<Serie> series = repositorioSerie.findAll();
+    private void listarSeriesBuscadas() {
+        series = repositorioSerie.findAll();
         series.stream()
                 .sorted(Comparator.comparing(Serie::getGenero))
                 .forEach(System.out::println);
